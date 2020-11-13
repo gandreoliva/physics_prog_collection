@@ -1,0 +1,225 @@
+/* [wxMaxima batch file version 1] [ DO NOT EDIT BY HAND! ]*/
+/* [ Created with wxMaxima version 15.04.0 ] */
+
+/* [wxMaxima: title   start ]
+Tolman-Oppenheimer-Volkoff equation derivation
+   [wxMaxima: title   end   ] */
+
+/* [wxMaxima: comment start ]
+It describes the structure of a spherically-symmetric body of isotropic material.
+
+For this derivation:
+    * Signature: - + + +
+    * Coordinates: Spherical-like
+    * Units: G=c=1
+    * Indices: {1: t,  2: r,  3: theta,  4: phi} (Maxima starts indices at 1)
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+load("ctensor");
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+ct_coords: [t,r,theta,phi];
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+The metric potentials 'Phi' and 'Lambda' are only functions of 'r' for a static object.
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+depends([Phi,Lambda],r);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Definition of the general spherically-symmetric metric
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+lg: zeromatrix(4,4)$
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+lg[1,1]: -exp(2*Phi);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+lg[2,2]: exp(2*Lambda);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+lg[3,3]: r^2;
+lg[4,4]: r^2*sin(theta)^2;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+/* Inverse metric */
+cmetric();
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Calculation of the Christoffel symbols
+
+mcs[i,j,k] = \Gamma_{i j}^k
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+christof(true);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Calculation of the Einstein tensor
+
+ein[i,j] = G_{i j}
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+einstein(true);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Definition of the Energy-Momentum tensor
+
+T[i,j] = T_i^j
+
+Density (rho) and pressure (p) are functions of 'r' only
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+depends([rho,p],r);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+T: zeromatrix(4,4)$
+T[1,1]: -rho$
+T[2,2]: p$
+T[3,3]: p$
+T[4,4]: p$
+T;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Equation 0: from the energy-momentum conservation 
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+divT: [0, 0, 0, 0]$
+
+for i: 1 thru 4 do(
+    sum: 0,
+    for j: 1 thru 4 do(
+        sum: sum + diff(T[i,j],ct_coords[j]),
+        for k: 1 thru 4 do(
+            sum: sum - mcs[i,j,k]*T[k,j] + mcs[j,k,j]*T[i,k]
+        )
+    ),
+    divT[i]: sum
+);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+divT[2] = 0;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+eq0: solve(divT[2]=0,'diff(Phi,r))[1];
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Equation 1: 't' component of the Einstein equations
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+eq1: ein[1,1] = 8*pi*T[1,1];
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+eq1: expand(eq1*r^2);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+/* Putting the terms inside the derivative */
+
+eq1: ratsubst(-'diff(r*exp(-2*Lambda),r),-diff(r*exp(-2*Lambda),r),eq1);
+depends(m,r);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+/* We define the enclosed mass as
+        m: integrate(4*pi*r^2*rho(r),r)
+    which implies
+        diff(m,r) = 4*pi*r^2*rho(r)
+*/
+
+eq1: ratsubst('diff(m,r),4*pi*r^2*rho,eq1);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Equation 2: direct integration of equation 1
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+integration_constant_counter: 0$
+eq2: expand(integrate(eq1+1,r)/r);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+/* Value of constant of integration,
+    boundary condition: m(0) = 0, Lambda(0) = 0
+*/
+eq2boundary: expand(eq2*r);
+eq2boundary: subst(0,Lambda,eq2boundary);
+eq2boundary: subst(0,r,eq2boundary);
+eq2boundary: subst(0,m,eq2boundary);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+eq2: subst(0,%c1,eq2);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Equation 3: 'r' component of the Einstein tensor
+
+The TOV equation is obtained by substituting equations 0 and 2 into 3. 
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+eq3: ein[2,2] = 8*pi*T[2,2];
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+eq3: ratsubst(rhs(eq2),lhs(eq2),eq3);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+eq3: solve(eq3,'diff(Phi,r))[1];
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+eq4: rhs(eq0) = rhs(eq3);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+TOV: factor(solve(eq4,'diff(p,r))[1]);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Fortran output
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+load(f90);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+/* 'diff(p,r) = */
+f90(rhs(TOV));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+/* 'diff(Phi,r) = */
+f90(rhs(eq3));
+/* [wxMaxima: input   end   ] */
+
+/* Maxima can't load/batch files which end with a comment! */
+"Created with wxMaxima"$
