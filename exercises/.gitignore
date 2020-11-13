@@ -1,0 +1,4 @@
+*.out
+*.dat
+out_analytical_mech_dpend_ele.f90
+data/

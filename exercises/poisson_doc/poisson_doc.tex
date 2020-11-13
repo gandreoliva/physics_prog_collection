@@ -1,0 +1,427 @@
+% Documentation for the Poisson equation
+% --------------------------------------
+% pdflatex poisson_doc.tex
+
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{geometry}
+
+
+\let\toparrow\vec
+\renewcommand{\vec}[1]{\toparrow{\mathbf{#1}}}
+\newcommand{\uv}[1]{\hat{\mathbf{#1}}}
+
+
+
+\begin{document}
+{\huge Poisson equation}
+
+\section{Incompressible inviscid flow}
+
+Conservation of mass implies
+\[ \frac{\partial\rho}{\partial t} = \vec \nabla \cdot (\rho \vec v)   \]
+\[ \implies 0 = \rho \vec \nabla \cdot \vec v \implies \vec \nabla \cdot \vec v = 0 \]
+
+We define a potential function $f$, such that $\vec v = \vec \nabla f$. The
+conservation of mass is then
+\[ \nabla^2 f = 0 \]
+
+\section{Finite differences}
+
+Using finite differences,
+\[ \frac{f(x+dx,y)-2f(x,y)+f(x-dx,y)}{dx^2} + \frac{f(x,y+dy)-2f(x,y)+f(x,y-dy)}{dy^2} = 0 \]
+
+we set $dx=dy$. Then, using indices,
+\[ +4f(i,j) -f(i,j+1) - f(i,j-1) - f(i+1,j) - f(i-1,j) = 0 \]
+
+This can be represented in \emph{stencil notation} $(i\rightarrow,j\downarrow)$ in the computational grid as
+
+\begin{tabular}{c|c|c|c|c}
+& & & & \\ \hline
+& & -1 & & \\ \hline
+& -1 & +4 & -1 & \\ \hline
+& & -1 & & \\ \hline
+& & & &
+\end{tabular}
+
+As an example, for a $3\times 3$ grid we have for the cell at the center
+
+\begin{tabular}{|c|c|c|}
+\hline
+& -1 & \\ \hline
+-1 & 4 & -1\\ \hline
+& -1 & \\
+\hline
+\end{tabular}
+
+If we deconstruct this grid, putting rows one after another,
+we can write the Poisson equation applied at the cell at the center
+\[ ( 0, -1, 0; -1, 4, -1; 0, -1, 0 )
+\left(
+\begin{matrix}
+f_{11}\\
+f_{12}\\
+f_{13}\\
+f_{21}\\
+f_{22}\\
+f_{23}\\
+f_{31}\\
+f_{32}\\
+f_{33}
+\end{matrix}
+\right)
+=
+0
+ \]
+
+So, we get a ``dot product'' notation.
+
+The cells of the grid represent only the inner points of the whole computational domain.
+That is why we enumerated them as $\{1,2,3\}$. The cells with indices 0 and 4 are
+the boundaries. In order to use the same ``dot product'' notation as above, we can just put the
+boundary values at the right hand side of the equation. So, for $i=1,j=2$, we would have
+
+\[ 4f(1,2) - f(1,3) - f(1,1) - f(2,2) - \underline{f(0,2)} = 0 \]
+
+\[ ( -1, 4, -1; 0, -1, 0; 0, 0, 0 )
+\left(
+\begin{matrix}
+f_{11}\\
+f_{12}\\
+f_{13}\\
+f_{21}\\
+f_{22}\\
+f_{23}\\
+f_{31}\\
+f_{32}\\
+f_{33}
+\end{matrix}
+\right)
+=
+f_{02}
+ \]
+
+So, this means that we can continue with the same pattern that we used for the
+cell at the center, and we put the boundary cells in the right-hand side. When
+we have all equations for all cells, we can solve the system of equations for
+all the unknowns. We can write the system in matrix notation.
+
+\section{Matrix notation}
+
+Now, we stack all the equations together in a matrix. For our $3\times 3$ grid,
+
+\begin{equation}
+\left[
+\begin{array}{c c c | c c c | c c c}
+ 4&-1& 0&-1& 0& 0& 0& 0& 0 \\
+-1& 4&-1& 0&-1& 0& 0& 0& 0 \\
+ 0&-1& 4& 0& 0&-1& 0& 0& 0 \\ \hline
+-1& 0& 0& 4&-1& 0&-1& 0& 0 \\
+ 0&-1& 0&-1& 4&-1& 0&-1& 0 \\
+ 0& 0&-1& 0&-1& 4& 0& 0&-1\\ \hline
+ 0& 0& 0&-1& 0& 0& 4&-1& 0 \\
+ 0& 0& 0& 0&-1& 0&-1& 4&-1\\
+ 0& 0& 0& 0& 0&-1& 0&-1& 4
+\end{array}
+\right]
+\left(
+\begin{matrix}
+f_{11}\\
+f_{12}\\
+f_{13}\\
+f_{21}\\
+f_{22}\\
+f_{23}\\
+f_{31}\\
+f_{32}\\
+f_{33}
+\end{matrix}
+\right)
+=
+\left(
+\begin{matrix}
+f_{01}\\
+f_{02}\\
+f_{03}\\
+0\\
+0\\
+0\\
+f_{41}\\
+f_{42}\\
+f_{43}
+\end{matrix}
+\right)
++
+\left(
+\begin{matrix}
+f_{10}\\
+0\\
+f_{14}\\
+f_{20}\\
+0\\
+f_{24}\\
+f_{30}\\
+0\\
+f_{34}
+\end{matrix}
+\right)
+\label{matrixeq}
+\end{equation}
+
+The matrix (that we will call $A$) is a block matrix of the following form
+(we show an example for a $4\times 4$ grid)
+\[
+A =
+\left(
+\begin{matrix}
+B & -I & & \\
+-I & B & -I & \\
+ & -I & B & -I \\
+ & & -I & B
+\end{matrix}
+\right)
+\]
+
+where $I$ is the identiy matrix and
+\[
+B =
+\left(
+\begin{matrix}
+4 & -1 & & \\
+-1 & 4 & -1 & \\
+ & -1 & 4 & -1 \\
+ & & -1 & 4
+\end{matrix}
+\right)
+\]
+
+The equation \ref{matrixeq} is in the form
+\[ A \vec f = \vec d + \vec e \]
+The vector $\vec f$ contains the unknowns of the system, and vector
+$\vec c = \vec d + \vec e$ contains the known boundary conditions.
+
+For a given cell $f_{ij}$, we shall think of the row that has the positive value
+($+4$) as the coefficient of $f_{ij}$ as the row that is supposed to calculate the value of $f_{ij}$, and
+we can think of the negative coefficients as the values of the neighbouring cells
+that are necessary to determine the value of $f_{ij}$.
+
+\section{Indices}
+In order to make calculations, we need to use an index $l$ to consecutively
+enumerate the entries on $\vec f$. For a $3\times 3$ grid,
+
+\begin{tabular}{c c | c}
+$i$ & $j$ & $l$ \\ \hline
+1 & 1 & 1 \\
+1 & 2 & 2 \\
+1 & 3 & 3 \\
+2 & 1 & 4 \\
+2 & 2 & 5 \\
+2 & 3 & 6 \\
+3 & 1 & 7 \\
+3 & 2 & 8 \\
+3 & 3 & 9
+\end{tabular}
+
+The definition of $l$ can be inferred by induction:
+\[ l = (i-1)n + j \]
+
+By the definition of modulo ($\%$) and integer division ($//$),
+\[ i-1 = l//n \]
+\[ j = l \% n \]
+but, for the case of an exact division (modulo 0), we need to readjust the
+indices, since there is no 0 index in $j$ for our numbering system of inner cells:
+\begin{verbatim}
+if (j == 0) then
+  j = n
+  i = i-1
+end if
+\end{verbatim}
+
+The boundary conditions $f(0,j)$ of $\vec d$ can be set by setting $i=1$ and iterating
+over $j$; the value is assigned to $d_l$. We proceed in a similar way for the other
+boundary conditions: $f(n+1,j)\to d(n,j)$, $f(i,0)\to d(i,1)$, $f(i,n+1) \to d(i,n)$.
+
+Now, in order to build the block matrix, we need two indices, $l$ and $m$, and we
+need to determine the range of cells of $A$ that should contain the matrices $B$ and
+$-I$.
+
+Let's focus only on the blocks on the index $l$ (horizontal). The first block goes from $l=1$
+to $l=n$. The second block starts from $l=n+1$ and ends at $l=2n$. The third block
+goes from $l=2n+1$ and ends at $l=3n$. So, for each block $i=1,2,3,...$, the
+corresponding $l$ for the start point is determined by $l = (i-1)n+1 $, and
+the $l$ for the end point is $l = in$. The same must be done with the indices
+$m$, as a function of $j$.
+
+To reiterate: the matrix $A$ has $n^2$ rows (index $l$). Each row is composed of the $n^2$
+cells of the whole computational grid, organized one row (of the grid) after another,
+and described by the index $l$. The row $l$ is used to determine the value of the
+cell $m=l$ (the diagonals represent the unknowns). Each linear equation (row $l$)
+makes reference to neighbouring cells, for which the columns $m\neq l$ are used.
+
+
+\section{Uniform free flow}
+
+For a uniform free flow from right to left,
+\[ \vec v = u \uv x  = - \vec \nabla f = \mathbf{const} \]
+\[ u \uv x = \frac{\partial f}{\partial x}\uv x + \frac{\partial f}{\partial y}\uv y \]
+\[ \implies u = \frac{\partial f}{\partial x} \]
+\[ \implies f(x)  = ux + k_0 \]
+Let's select $k_0$ (integration constant) as zero. Then, at the left boundary
+$f(i,0) = 0$. At the right boundary, $f(i,n) = un = \text{const}$.
+At the top boundary, $f(0,j) = ux$, and at the bottom boundary, $f(n,j) = ux$.
+
+
+
+\section{Obstacle in a fluid flow}
+
+Let us consider an obstacle in the flow. At the boundaries of the obstacle,
+(inner boundary of the computational domain), the velocity should
+``slide along the surface'', that is, $\vec v$ should be perpendicular to a vector $\uv n$ which
+is perpendicular to the surface in the direction of ``outside'' the obstacle:
+\begin{equation} \vec v \cdot \uv n = 0 \label{innerboundary} \end{equation}
+
+Consider an obstacle that spans over only one grid cell at $(k_a,k_b)$.
+
+\begin{tabular}{c|c|c|c|c}
+& & & & \\ \hline
+& & $k_a-1,k_b$ & & \\ \hline
+& $k_a,k_b-1$ & $k_a,k_b$ & $k_a,k_b+1$ & \\ \hline
+& & $k_a+1,k_b$ & & \\ \hline
+& & & &
+\end{tabular}
+
+We need to delete the equation (row) on matrix $A$ that would determine the value for
+$(k_a,k_b)$. In order not to create a singular matrix, we can simply put
+\[ f_{k_a,k_b} = 0 \]
+
+Now, we need to take care of the boundaries of the obstacle, that must obey
+equation \ref{innerboundary}. First, we start with the ``cross'' (+) boundary cells that
+we represented in the grid above. We need to remove from matrix $A$ the rows that
+determine the values of each of the cells of the cross.
+
+Now, we replace the row with the boundary condition. For example, let's take the
+cell $(k_a,k_b-1)$. According to equation \ref{innerboundary}, it should obey
+the condition
+\[ (v_x \uv x + v_y \uv y) \cdot (-\uv x) = 0 \]
+\[ \implies -v_x = 0 \]
+\[ \implies \frac{f(k_a,k_b-2)-f(k_a,k_b-1)}{dx} = 0\]
+so we end up with the simpler condition
+\[ f(k_a,k_b-2) = f(k_a,k_b-1)  \]
+which in general, means that the value of $f$ near the inner boundary should be just
+copied from the neighbouring outer cell. Rearranging,
+\[ -f(k_a,k_b-2) + f(k_a,k_b-1) = 0 \]
+
+We can implement this in the code in the following way:
+\begin{itemize}
+\item The matrix $A$ has entries $A(l,m) = A((i_1,j_1)\to l,\ (i_2,j_2)\to m)$.
+\item The row that determines $f_{k_a,k_b-1}$ is $A((k_a,k_b-1)\to l,\ :)$ and should be
+crossed out. We need to replace it.
+\item The entry in row $l$ that represents $f_{k_a,k_b-1}$ is $A(l,l)$, and its
+value is now $1$.
+\item The entry in row $l$ that represents $f_{k_a,k_b-2}$ is
+$A(l,\ (k_a,k_b-2)\to m)$, and its value is now $-1$.
+\end{itemize}
+
+We can repeat the algorithm to match the other cross boundaries of the obstacle.
+
+\vspace{2em}
+
+For the corners, the situation is more complicated.
+
+\begin{tabular}{c|c|c|c|c}
+& & & & \\ \hline
+& $k_a-1,k_b-1$ & & $k_a-1,k_b+1$ & \\ \hline
+& & $k_a,k_b$ & & \\ \hline
+& $k_a+1,k_b-1$ & & $k_a+1,k_b+1$ &\\ \hline
+& & & &
+\end{tabular}
+
+In general, we should use the equation \ref{innerboundary}. Suppose we have surface
+that makes an angle $\phi$ with the vertical. Then, it's easy to show that
+\[ \uv n = \cos\phi \uv x + \sin\phi \uv y \]
+and then we could solve the dot product
+\[ \left(\frac{\partial f}{\partial x} \uv x + \frac{\partial f}{\partial y}\uv y\right)
+\cdot
+(\cos\phi \uv x + \sin\phi \uv y)
+=0 \]
+and create a condition that depends on the derivatives along the $i$ and $j$ directions,
+For example, for $\phi = 45^\circ$ and the bottom right corner,
+\[ \frac{1}{\sqrt{2}}\frac{f(i+2,j)-f(i+1,j)}{dx} +
+\frac{1}{\sqrt{2}}\frac{f(i,j+2)-f(i,j+1)}{dy} = 0\]
+This condition involves the neighbouring cells in the $i$ and $j$ directions, but
+not in the diagonal direction.
+
+For our very simple case of having only one cell as obstacle, it is simpler to
+instead take directly the ``radial'' direction,
+that is, using the diagonal direction. For example, for the bottom right corner,
+\[ \frac{\partial f}{\partial r} = 0 \implies \]
+\[ f(k_a+1,k_b+1) = f(k_a+2,k_b+2) \]
+
+After replacing the corresponding rows in $A$, the system of equations is complete
+and the solution can be calculated.
+
+
+\section{Obstacle files}
+A one cell obstacle can be described by the following grid:
+
+\begin{tabular}{|c||c|c|c|c|c|}
+\hline
+	&-2	&-1	&0	&1	&2	\\ \hline\hline
+2	&C	&	&c	&	&C	\\ \hline
+1	&	&x	&+	&x	&	\\ \hline
+0	&c	&+	&O	&+	&c	\\ \hline
+-1	&	&x	&+	&x	&	\\ \hline
+-2	&C	&	&c	&	&C	\\ \hline
+\end{tabular}
+
+where O is the obstacle cell, + are the ``cross'' boundary cells, that copy the
+horizontal/vertical neighbors (c), and x are the cells that copy the diagonal
+neighbors (C).
+
+If we specify the center of the obstacle as having the coordinates $k_a,k_b$,
+the specification for the operations necessary to handle the inner boundary can
+be read from a file organized by columns:
+
+\begin{enumerate}
+	\item $\Delta k_a$ for the value of $l$
+	\item $\Delta k_b$ for the value of $l$
+	\item $\Delta k_a$ for the value of $m$
+	\item $\Delta k_b$ for the value of $m$
+	\item value in the system of equations.
+\end{enumerate}
+
+This is used in the code as follows:
+
+The obstacle cell (coordinates \verb|0 0|, i.e., $k_a+0,k_b+0$) has the
+potential $f$ set to zero, so, $A((k_a,k_b)\to l, (k_a,k_b)\to m) = 1$ (n.b.,
+$m=l$). This is equivalent to the equation $f(k_a,k_b) = 0$. This means that the
+line first line of the file is
+\begin{verbatim}
+0	0	0	0	1
+\end{verbatim}
+
+For an inner boundary cell, for example, \verb|0 -1| (which means
+$k_a+0,k_b-1$), the equation to be satisfied is
+\[ -f(k_a,k_b-2) + f(k_a,k_b-1) = 0 \]
+So, $A((k_a,k_b-1)\to l, (k_a,k_b-1)\to m) = 1$, which means, in the file:
+\begin{verbatim}
+0	-1	0	-1	1
+\end{verbatim}
+and for the neighbouring cell,
+$A((k_a,k_b-1)\to l, (k_a,k_b-2)\to m) = -1$, which is set in the file as
+\begin{verbatim}
+0	-1	0	-2	-1
+\end{verbatim}
+
+The same procedure has to be done for the other cells that have either a + or an
+x in the diagram.
+
+\emph{Warning:} when the matrix $A$ is built, no obstacle exists yet. When the
+obstacle is added, the row $l$ of $A$ that contains every cell of the boundary
+has to be set to zero before the new equations can be set. In the current
+implementation of the code, that operation is done when $l = m$, that is, in the
+previous example, the line \verb|0	-1	0	-1	1| has to come before the line
+\verb|0	-1	0	-2	-1|.
+
+
+\end{document}

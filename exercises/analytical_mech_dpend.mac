@@ -1,0 +1,64 @@
+/*
+Analytical mechanics: double pendulum
+*/
+
+load("f90")$
+
+x1: l*sin(theta)$
+y1: -l*cos(theta)$
+x2: l*sin(theta)+l*sin(phi)$
+y2: -l*cos(theta)-l*cos(phi)$
+
+cartcoords: [x1,y1,x2,y2]$
+gencoords: [theta,phi]$
+gencoords_dot: [thetad, phid]$
+gencoords_ddot: [thetadd, phidd]$
+
+depends(theta,t)$
+depends(phi,t)$
+
+V: m*g*y1 + m*g*y2$
+
+V: trigreduce(trigsimp(V))$
+
+T: 0$
+for cartcoord in cartcoords do(
+  T: T + 1/2*m*(diff(cartcoord,t))**2
+)$
+
+T: trigreduce(trigsimp(T))$
+
+Lagrangian: T - V$
+Lagrangian: trigreduce(trigsimp(Lagrangian))$
+
+
+/* Euler-Lagrange equations*/
+ele: []$
+for gencoord in gencoords do(
+   eq: diff(diff(Lagrangian,diff(gencoord,t)),t) - diff(Lagrangian,gencoord) = 0,
+   ele: append(ele,[trigreduce(trigsimp(eq))])
+)$
+
+
+/* Substitution of derivatives with simple variables */
+for i thru length(ele) do(
+  for j thru length(gencoords) do(
+    ele[i]: subst(gencoords_ddot[j], 'diff(gencoords[j],t,2), ele[i]),
+    ele[i]: subst(gencoords_dot[j], 'diff(gencoords[j],t), ele[i])
+  )
+)$
+
+/* Solution for the accelerations,
+so that the equations can be solved numerically */
+ele: solve(ele, gencoords_ddot)[1]$
+
+/* Collect only the right hand side */
+elerhs: []$
+for i thru length(ele) do(
+  elerhs: append(elerhs, [rhs(ele[i])])
+)$
+
+/* stringout("out.txt", elerhs)$ */
+
+/* Fortran output */
+with_stdout("out_analytical_mech_dpend_ele.f90",f90(elerhs))$
