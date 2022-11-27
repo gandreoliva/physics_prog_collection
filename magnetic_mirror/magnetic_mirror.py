@@ -1,7 +1,23 @@
 from vpython import *
-import numpy as np
-import matplotlib.pyplot as plt
 import random
+
+"""
+Botella magnética: plasma enrarecido moviéndose en varias configuraciones de
+campo magnético:
+    Btype =
+        no : expansión de un gas ideal
+        uniform: campo magnético uniforme (movimiento helicoidal)
+        helmholtz : campo de la bobina de Helmholtz (solo en dir. z)
+        dipole: botella/espejos magnéticos, con dos dipolos puntuales.
+
+Autor: André Oliva, gandreoliva.org
+Universidad de Costa Rica, Universidad de Tübingen
+Licencia: BSD (modificaciones bajo la misma licencia posibles)
+Copyright (c) 2021 Andre Oliva. All rights reserved.
+Redistribution and use in source and binary forms are permitted provided that the above copyright notice and this paragraph are duplicated in all such forms and that any documentation, advertising materials, and other materials related to such distribution and use acknowledge that the software was developed by Andre Oliva. The name of the Andre Oliva may not be used to endorse or promote products derived from this software without specific prior written permission.
+THIS SOFTWARE IS PROVIDED “AS IS” AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+"""
+
 
 N = 20
 kT = 10 # eV
@@ -50,15 +66,18 @@ def get_maxwellian_speed():
     else:
         return vrand # units of v0
 
+
 def set_maxwellian_distrib(particles,kT):
+    # Añade la distribución de Maxwell-Boltzmann a todas las partículas de la lista
     for i,particle in enumerate(particles):
         dir = randvec(1,samples=10)
         dir = dir/mag(dir)
         particle.vel = dir*get_maxwellian_speed()*v0
 
 
-
+# caja transparente de referencia
 refbox = box(width=2*L,length=2*L,height=2*L,opacity=0.1)
+# Iones
 ions = [sphere(cpos = randvec(L),color=color.cyan, mass=m_p,
             make_trail = True, trail_radius=0, trail_type="curve",interval=4,
             q = qe, radius=0.03, lpos=[]) for i in range(N//2)]
@@ -88,6 +107,15 @@ dt = (L/v0)*0.0005
 tf = 3e4*dt
 t = 0
 times = []
+
+# Como la simulación es algo intensa como para calcular y visualizar
+# en tiempo real, primero se hacen los cálculos y se almacena la posición
+# en particle.lpos, la lista de todas las posiciones, y el tiempo en
+# times. La variable particle.cpos es solo una variable temporal para
+# almacenar la posición de la partícula sin moverla en la pantalla.
+# Una vez calculadas todas las posiciones, se procede a visualizar
+# cambiando la propiedad particle.pos
+
 
 print("Calculando...")
 l1 = label( pos=vec(0,0,1), text="Calculando...")
@@ -135,6 +163,7 @@ while t < tf:
         particle.vel = particle.vel + particle.acc*dt
         particle.cpos = particle.cpos + particle.vel*dt
         particle.lpos.append(particle.cpos)
+
 
 print("Visualizando...")
 l1.visible=False
