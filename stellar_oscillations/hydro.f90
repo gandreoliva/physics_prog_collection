@@ -229,8 +229,8 @@ contains
     !! or define an external constant force.
     integer :: i
     real(dp) :: f_ext
-    ! f_ext = f_grav(i)
-    f_ext = 0d0
+    f_ext = f_grav(i)
+    ! f_ext = 0d0
   end function
 
   function f_grav(i)
@@ -254,7 +254,7 @@ program stellar_oscillations
   !! --------------------------------------
   use, intrinsic :: iso_fortran_env, dp => real64
   use hydro_solver
-  ! use stellar_units
+  use units
   implicit none
   integer :: nt, i, ntmax, output_frequency
   integer :: rh_outfile, u_outfile, t_outfile, ra_outfile, rb_outfile, inputfile
@@ -327,9 +327,9 @@ program stellar_oscillations
   end do
 
   !! time control
-  dt = 0.001
-  ntmax = 3000
-  output_frequency = 100
+  dt = 1d-3
+  ntmax = 5000
+  output_frequency = 500
 
   !! data files
   open(newunit=rh_outfile,  file=out_dir//"rh.dat", status="replace", action="write")
