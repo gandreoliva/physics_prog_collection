@@ -2,9 +2,8 @@
 !!! compilation: gfortran -o hydro hydro.f90
 !!! run: ./hydro
 !!!
-!!! Lab procedure
+!!! Running order
 !!!     Lane-Emden eqn. --> (( hydro code )) --> plotting scripts
-
 
 module units
   !! Handles unit conversions and sets constants
@@ -47,8 +46,12 @@ contains
     end subroutine
 end module
 
-module star_solver
-  !! 1D hydrodynamics solver with gravity
+module hydro_solver
+  !! 1D hydrodynamics solver with self-gravity
+  !! --------------------------------------------------------
+  !! Simple finite differences with donor cell upwind scheme and operator splitting. See
+  !! Bodenheimer, Laughlin, Rozyczka and Yorke (2007) "Numerical Methods in Astrophysics",
+  !! Taylor and Francis. Sections 6.3.2 and 6.5.
   !! --------------------------------------------------------
   !! /!\ All variables in this module are in code units only!
   use, intrinsic :: iso_fortran_env, dp => real64
@@ -57,7 +60,7 @@ module star_solver
   !! Parameters
   integer, parameter :: nr = 100 ! number of cells
   real(dp), parameter, private :: pi = 3.141592653589793
-  !! variables of the problem
+  !! primitive variables of the problem
   real(dp), dimension(0:nr+1) :: rh ! (adimensional) density (def. at centers)
   real(dp), dimension(0:nr+1) :: p ! (adimensional) pressure (def. at centers)
   real(dp), dimension(0:nr+2) :: u ! (adimensional) velocity (def. at walls)
@@ -108,19 +111,6 @@ contains
     surfa(1:nr+1) = 4*pi*ra(1:nr+1)**2
     surfb(1:nr) = 4*pi*rb(1:nr)**2
   end subroutine
-
-  function fgrav(i)
-    !! Computes the gravitational force for cell i
-    integer :: i,j
-    real(dp) :: fgrav, m
-    !! calculation of the enclosed mass
-    m = 0d0
-    do j = 1,i-1
-      m = m + rh(j)*dvolb(j)
-    end do
-    !! gravitational specific force (code units)
-    fgrav = -m/(ra(i)**2)
-  end function
 
   subroutine apply_boundary_cond
     !! no velocity at boundaries => no outflow
@@ -211,13 +201,15 @@ contains
 
     !! b.3. evolve momentum (momentum equation, only advection terms)
     !!     ---> we obtain w( t + first_step, r )
+    !! N.b.: u(i) is defined at the right hand side of the cell, which is
+    !! a different convention than Bodenheimer et al 2007 Sect 6.5.
     do i = 2,nr
       w(i) = w(i) - dt/dvola(i) * ( surfb(i)*w_flux(i) - surfb(i-1)*w_flux(i-1) )
       u(i) = w(i)/avg_rh(i)
     end do
   end subroutine
 
-  subroutine forces_step
+  subroutine sources_step
     integer :: i
 
     !! compute pressure
@@ -226,9 +218,33 @@ contains
     !! evolve velocity (momentum equation, force terms)
     !! ---> we obtain u(t + dt)
     do i = 2, nr
-      u(i) = u(i) + dt*( fgrav(i) - 1/avg_rh(i)*(p(i) - p(i-1))/(rb(i) - rb(i-1)) )
+      u(i) = u(i) + dt*( f_ext(i) - 1/avg_rh(i)*(p(i) - p(i-1))/(rb(i) - rb(i-1)) )
     end do
   end subroutine
+
+!! External specific forces implemented
+
+  function f_ext(i)
+    !! Total external force. Here one can turn gravity on and off, for example,
+    !! or define an external constant force.
+    integer :: i
+    real(dp) :: f_ext
+    ! f_ext = f_grav(i)
+    f_ext = 0d0
+  end function
+
+  function f_grav(i)
+    !! Computes the gravitational force for cell i
+    integer :: i,j
+    real(dp) :: f_grav, m
+    !! calculation of the enclosed mass
+    m = 0d0
+    do j = 1,i-1
+      m = m + rh(j)*dvolb(j)
+    end do
+    !! gravitational specific force (code stellar units)
+    f_grav = -m/(ra(i)**2)
+  end function
 
 end module
 
@@ -237,10 +253,10 @@ program stellar_oscillations
   !! Main program (the execution starts here)
   !! --------------------------------------
   use, intrinsic :: iso_fortran_env, dp => real64
-  use star_solver
-  use units
+  use hydro_solver
+  ! use stellar_units
   implicit none
-  integer :: nt, i, ntmax
+  integer :: nt, i, ntmax, output_frequency
   integer :: rh_outfile, u_outfile, t_outfile, ra_outfile, rb_outfile, inputfile
   character(*), parameter :: out_dir = "data/"
   !! Controls what's printed on the screen: 0: step info, 1: detailed, 2: minimal
@@ -252,9 +268,10 @@ program stellar_oscillations
 
   print*, "--------------------------------------------------------------------------"
   print*, " Stellar oscillations   *  . ·           > 1D hydro+gravity code"
-  print*, " ::: Adv Lab Astron Astroph - CPT - Uni Tübingen - 2020"
   print*, "=========================================================================="
 
+  !! Parameters
+  !! ([un]comment to select: reading parameters from file or prescription)
 
   !! Parameters: FROM FILE
   open(newunit=inputfile,  file="equil_model.dat", action="read")
@@ -265,10 +282,12 @@ program stellar_oscillations
   ! rstar = pi
   ! n_gas = 1d0
 
+  !! (end of selection by [un]commenting)
+
   !! Setting of units and grid
   rmax = 1.5*rstar ! maximum r position in the grid [code units]
   rmin = 0d0 ! minimum r position in the grid [code units]
-  !! The number of cells in r, `nr`, is adjusted in the module `star_solver`
+  !! The number of cells in r, `nr`, is adjusted in the module `hydro_solver`
   dr = (rmax - rmin)/nr
 
   call set_code_constants
@@ -276,6 +295,7 @@ program stellar_oscillations
 
 
   !! Initial conditions
+  !! ([un]comment to select: reading initial condition from file or prescription)
 
   !! initial density: ANALYTICAL
   ! rh = 0.001d0
@@ -290,6 +310,8 @@ program stellar_oscillations
   do i = 0, nr+1
     read(inputfile,*) rh(i)
   end do
+
+  !! (end of selection by [un]commenting)
 
 
   !! initial velocity
@@ -307,6 +329,7 @@ program stellar_oscillations
   !! time control
   dt = 0.001
   ntmax = 3000
+  output_frequency = 100
 
   !! data files
   open(newunit=rh_outfile,  file=out_dir//"rh.dat", status="replace", action="write")
@@ -330,7 +353,7 @@ program stellar_oscillations
     call advect_momentum
 
     if (verbose == 1) print*, "forces step..."
-    call forces_step
+    call sources_step
 
     if (verbose == 1) print*, "applying boundary conditions..."
     call apply_boundary_cond
@@ -347,9 +370,11 @@ program stellar_oscillations
     end if
 
     !! output to files
-    write(rh_outfile,*) rh
-    write(u_outfile,*) u
-    write(t_outfile,*) t
+    if (mod(nt,output_frequency) == 0) then
+      write(rh_outfile,*) rh
+      write(u_outfile,*) u
+      write(t_outfile,*) t
+    end if
   end do
 
   close(rh_outfile)

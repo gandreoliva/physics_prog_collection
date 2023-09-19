@@ -3,8 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
 
-# Lab procedure
+# Running order
 # (( Lane-Emden eqn. )) -->  hydro code  --> plotting scripts
+"""
+Solver for the Lane-Emden equation (hydrostatic stellar structure).
+This is used as an initial condition for the hydrodynamical stellar structure
+code.
+"""
+
+
 
 header=r"""
 --------------------------------------------------------------------------
