@@ -1,2 +1,5 @@
-# physics_program_collection
-Simple Physics problems
+# Collection of simple physics problems
+
+This is a collection of numerically-solved physics problems for teaching purposes.
+
+www.gandreoliva.org
