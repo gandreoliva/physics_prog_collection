@@ -5,9 +5,9 @@ Structure of the files
 ----------------------
 central density, in g/cm**3 (real)
 polytrope k (real)
-polytrope gamma (real)
+polytrope Gamma (real)
 
-Note: in the literature about polytropes, gamma = 1 + 1/n
+Note: in the literature about polytropes, Gamma = 1 + 1/n
 
 List of polytropes
 ------------------
@@ -30,6 +30,6 @@ List of polytropes
     (bad approach: way too large neutron star! It's here just for completeness)
 
  * BU0: empirical
-    K[g] = 100 km**2 for Gamma = 2
+    K[g] ~ 100 km**2 for Gamma = 2
     This corresponds to a polytropic EOS that yields average mass and radius neutron stars;
     EOS of moderate stiffness. See, e.g., Stergioulas et al 2004 MNRAS 352 1089.
