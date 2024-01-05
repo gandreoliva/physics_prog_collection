@@ -5,7 +5,7 @@ metric:
 	gfortran tov_metric.f90 -o tov_metric.bin
 
 structure:
-	gfortran tov_structure.f90 -o tov_structure.bin
+	gfortran -Wall tov_structure.f90 -o tov_structure.bin
 
 clean:
 	rm *.bin

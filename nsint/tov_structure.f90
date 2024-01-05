@@ -8,13 +8,14 @@ program tov
   real :: r_end, dr, k_pol, gamma_pol
   integer :: i
   real, dimension(0:n_r) :: p,r,rho,m
-  real :: phi, lambda
 
   ! Boundary conditions and parameters
   r_end = 40 ! km
-  rho(0) = 5e15*1e3 * G/c**2*km**2 ! km**-2, see notes 1,3
-  k_pol = 7.349 ! see note 2
-  gamma_pol = 5/3.
+  read(*,*) rho(0) ! g/cm**3
+  rho(0) = rho(0)*1e3 * G/c**2*km**2 ! km**-2, see notes 1,3
+  read(*,*) k_pol ! see note 2
+  read(*,*) gamma_pol
+
 
   ! Grid generation
   dr = r_end/n_r
@@ -58,19 +59,12 @@ end program
 !  => x[g] = c**m * (G/c**2)**p * x[SI], and D[x,g] = L**(n+m+p)
 
 ! 2. Polytropic EOS
+!  See parameters/ directory
+!  The code can be run with those files as input from the command line.
 !  * For a non relativistic neutron gas, P = 1.9*hbar**2*mn**(-8/3)*rho**(5/3)
-!     => K[SI] = 5377
-!     Dimensions: D[P]/D[rho]**(5/3) = L**4*M**(-2/3)*T**-2
-!     => D[K,g] = L**(4/3), and K[g] = c**-2*(G/c**2)**(-2/3) * K[SI]
-!     => K[g] = 72 470 m**(4/3) = 7.349 km**(4/3)
 !     ---> gamma_pol = 5/3, k_pol = 7.349
 !     (bad values but first theoretical approach; order-of-magnitude correct only)
-!  * For an ultra-relativistic neutron gas, P = 0.8*hbar*c/(mn)**(4/3) * rho**(4/3)
-!     => K[SI] = 0.8*hbar*c/(mn)**(4/3) = 2e9
-!     Dimensions: D[hbar]*D[c]/D[mn] = M**(-1/3)*L**3*T**(-2)
-!     => K[g] = c**(-2) * (G/c**2)**(-1/3) * K[SI] = 1.515 km**(2/3)
-!     ---> gamma_pol = 4/3, k_pol = 1.515
-!  * In [arXiv:1406.3775v1]: K[g] = 100 km**2 for Gamma = 2
+!  * BU0 model for a polytrope of moderate stiffness: K[g] ~ 100 km**2 for Gamma = 2
 
 ! 3. We are assuming relativistic energy density = rho; a rest mass distiction
 !   must be taken into account.
