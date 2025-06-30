@@ -138,7 +138,8 @@ program static_star
 
     do while (i > imax-20)
         call structure_near_surface(i)
-        print"(6es14.5,' ',a)", r(i)/stellar_radius, mass(i)/solar_mass, temp(i), rho(i), prs(i), lum(i)/solar_luminosity, transport_type
+        print"(6es14.5,' ',a)",&
+        & r(i)/stellar_radius, mass(i)/solar_mass, temp(i), rho(i), prs(i), lum(i)/solar_luminosity, transport_type
         i = i - 1
     end do
 
@@ -179,7 +180,8 @@ program static_star
             transport_type = 'r' ! radiative
         end if
 
-        print"(6es14.5,' ',a)", r(i)/stellar_radius, mass(i)/solar_mass, temp(i), rho(i), prs(i), lum(i)/solar_luminosity, transport_type
+        print"(6es14.5,' ',a)",&
+        & r(i)/stellar_radius, mass(i)/solar_mass, temp(i), rho(i), prs(i), lum(i)/solar_luminosity, transport_type
         i = i - 1
     end do
 

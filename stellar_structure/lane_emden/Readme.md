@@ -1,4 +1,4 @@
-# Stellar structure
+# Lane-Emden equation
 
 Numerical integration of the Lane-Endem equation.
 
