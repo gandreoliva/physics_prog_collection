@@ -1,3 +1,9 @@
+! Static star
+! ===========
+! Qualitatively solves the stellar structure equations with the shooting method
+! and manual adjustements to satisfy the central boundary conditions.
+! Adapted from Carroll & Ostlie (2014). For teaching purposes only.
+
 module constants
     use iso_fortran_env, only: wp => real64
     implicit none
@@ -89,12 +95,13 @@ program static_star
     real(wp), dimension(1:imax) :: r, prs, mass, lum
     real(wp), dimension(1:imax) :: k_opac, rho, temp, enuc
     real(wp) :: stellar_mass, stellar_luminosity, effective_temperature
-    real(wp) :: stellar_radius, dr, dlP_dlT, dP_dr
+    real(wp) :: stellar_radius, dr, dlT_dlP, dP_dr
     real(wp) :: H_frac, He_frac, metallicity
     integer :: i
     character(len=1) :: transport_type ! = {r: radiative, c: convective}
 
     ! input quantities: Sun
+    read stellar_mass
     stellar_mass = solar_mass
     stellar_luminosity = solar_luminosity
     effective_temperature = 5772 ! K
@@ -124,7 +131,7 @@ program static_star
 
     call initalize_microphysics(H_frac, He_frac, metallicity)
 
-    print*, "r(i)/stellar_radius, mass(i)/solar_mass, temp(i), rho(i), prs(i), lum(i)/solar_luminosity, transport_type"
+    print*, "r(i)/Rsun     mass(i)/Msun    temp(i)       rho(i)       prs(i)      lum(i)/Lsun    conv|rad"
 
 
     i = imax
@@ -132,7 +139,7 @@ program static_star
 
     do while (i > imax-20)
         call structure_near_surface(i)
-        print*, r(i)/stellar_radius, mass(i)/solar_mass, temp(i), rho(i), prs(i), lum(i)/solar_luminosity, transport_type
+        print"(6es14.5,' ',a)", r(i)/stellar_radius, mass(i)/solar_mass, temp(i), rho(i), prs(i), lum(i)/solar_luminosity, transport_type
         i = i - 1
     end do
 
@@ -155,29 +162,33 @@ program static_star
         lum(i-1) = lum(i) + 4*pi*r(i)**2 * rho(i) * enuc(i) * dr
 
         ! Energy transport
-        dlP_dlT = log(prs(i-1)/prs(i))/log(temp(i-1)/temp(i))
-        ! test to decide whether the shell is radiative or convective
-        if (dlP_dlT > (gamma_ad - 1)/gamma_ad) then
-            transport_type = 'c' ! covective
+        if (transport_type == 'c') then
             !   (4.1) energy transfer in convective zones
             dP_dr = ( prs(i-1) - prs(i) ) / dr
             temp(i-1) = temp(i) + (1-1d0/gamma_ad) * temp(i)/prs(i) * dP_dr * dr
         else
-            transport_type = 'r' ! radiative
             !   (4.2) energy transfer in radiative zones
             temp(i-1) = temp(i) - (3/(16*pi*a_rad*c_light)) * &
                 &   k_opac(i) * rho(i) * lum(i) / (r(i)**2 * temp(i)**3) * dr
         end if
 
-        print*, r(i)/stellar_radius, mass(i)/solar_mass, temp(i), rho(i), prs(i), lum(i)/solar_luminosity, transport_type
+        dlT_dlP = log(temp(i-1)/temp(i))/log(prs(i-1)/prs(i))
+        ! test to decide whether the next shell is radiative or convective
+        if (dlT_dlP > (gamma_ad - 1)/gamma_ad) then
+            transport_type = 'c' ! covective
+        else
+            transport_type = 'r' ! radiative
+        end if
+
+        print"(6es14.5,' ',a)", r(i)/stellar_radius, mass(i)/solar_mass, temp(i), rho(i), prs(i), lum(i)/solar_luminosity, transport_type
         i = i - 1
     end do
 
 contains
     subroutine structure_near_surface(i)
+        ! Near the surface, we need to expand the structure equations (otherwise, e.g. rho = 0 because prs = 0)
         integer, intent(in) :: i
         real(wp) :: gaunt_to_guillotine, a_bf, a_ff, a_tot, ad_pt_const
-
 
         ! Calculation of opacity factors using Kramer's law form
         if (i == imax) then
@@ -198,12 +209,16 @@ contains
         lum(i-1) = lum(i)
 
         if (transport_type == 'r') then
+            ! We assume near the surface lum(i) = L, mass(i) = M. From the structure eqns (with rad),
+            ! one builds dP/dT = (dP/dr)/(dT/dr). Using only bound-free and free-free opacity (Kramer's law)
+            ! and the equation of state, one eliminates the dep. on rho and can separate variables.
+            ! Then, one can integrate and find P(T). Finally, with the structure eqn on dT/dr one
+            ! can integrate to get T(r). Similar procedure for convection.
             temp(i-1) = (molec_weight*m_proton/k_B) * G*mass(i-1)/4.25 &
                 &       * (1/r(i-1) - 1/stellar_radius)
             prs(i-1) = sqrt((1/4.25d0)*(16*pi*a_rad*c_light/3)*(k_B/(a_tot*molec_weight*m_proton))) &
                 &       * sqrt(G*mass(i-1)/lum(i-1)) * temp(i-1)**4.25d0
-
-        else if (transport_type == 'c') then
+        else
             temp(i-1) = (gamma_ad - 1)/gamma_ad * G*mass(i-1) * (molec_weight*m_proton/k_B) &
                 &       * (1/r(i-1) - 1/stellar_radius)
             prs(i-1) = ad_pt_const * temp(i-1)**(gamma_ad/(gamma_ad-1))
@@ -214,13 +229,14 @@ contains
         enuc(i-1) = get_nuclear_energy_generated(rho(i-1),temp(i-1))
 
         ! determine whether the next layer will be convective or radiative
-        dlP_dlT = log(prs(i-1)/prs(i))/log(temp(i-1)/temp(i))
-        if (dlP_dlT > (gamma_ad - 1)/gamma_ad) then
-            transport_type = 'c' ! covective
-        else
-            transport_type = 'r'
+        if (i < imax) then
+            dlT_dlP = log(temp(i-1)/temp(i))/log(prs(i-1)/prs(i))
+            if (dlT_dlP > (gamma_ad - 1)/gamma_ad) then
+                transport_type = 'c' ! covective
+            else
+                transport_type = 'r' ! radiative
+            end if
         end if
-
 
     end subroutine
 
