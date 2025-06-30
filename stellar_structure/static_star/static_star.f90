@@ -101,7 +101,6 @@ program static_star
     character(len=1) :: transport_type ! = {r: radiative, c: convective}
 
     ! input quantities: Sun
-    read stellar_mass
     stellar_mass = solar_mass
     stellar_luminosity = solar_luminosity
     effective_temperature = 5772 ! K

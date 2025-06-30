@@ -4,4 +4,4 @@ static_star:
 	gfortran $@.f90 -o $@.bin
 
 clean:
-	rm *.bin
+	rm *.bin *.mod
