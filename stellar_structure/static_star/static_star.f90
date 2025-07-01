@@ -100,21 +100,22 @@ program static_star
     integer :: i
     character(len=1) :: transport_type ! = {r: radiative, c: convective}
 
-    ! input quantities: Sun
-    stellar_mass = solar_mass
-    stellar_luminosity = solar_luminosity
-    effective_temperature = 5772 ! K
-    H_frac = solar_H_frac
-    metallicity = solar_metallicity
-    He_frac = 1 - H_frac - metallicity
+    real(wp) :: input_mass, input_lum, input_temp, input_H_frac, input_metal
 
-    ! input quantities: Meissa A
-    ! stellar_mass = 34*solar_mass
-    ! stellar_luminosity = 200000*solar_luminosity
-    ! effective_temperature = 36000 ! K
-    ! H_frac = solar_H_frac
-    ! metallicity = solar_metallicity
-    ! He_frac = 1 - H_frac - metallicity
+    ! input quantities
+    read*, input_mass
+    read*, input_lum
+    read*, input_temp
+    read*, input_H_frac
+    read*, input_metal
+
+    ! setup star from input
+    stellar_mass = input_mass*solar_mass
+    stellar_luminosity = input_lum*solar_luminosity
+    effective_temperature = input_temp ! K
+    H_frac = input_H_frac*solar_H_frac
+    metallicity = input_metal*solar_metallicity
+    He_frac = 1 - H_frac - metallicity
 
 
     ! external boundary conditions
